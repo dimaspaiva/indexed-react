@@ -6,9 +6,9 @@ class IndexB {
     window.indexedDB.deleteDatabase(this.database);
   }
 
-  indexedAsync = (operation) => {
+  databaseRequest = (operation) => {
     return new Promise((resolve, reject) => {
-      const request = window.indexedDB.open(this.database, 1);
+      const request = window.indexedDB.open(this.database, 1); // configure indexedDB for others browsers
 
       request.onupgradeneeded = () => {
         const { result: db } = request;
@@ -18,19 +18,14 @@ class IndexB {
       request.onsuccess = () => {
         const { result: db } = request;
         const transaction = db.transaction(this.storeName, 'readwrite');
-        const objectStore = transaction.objectStore(
-          this.storeName,
-          'readwrite'
-        );
-
+        const objectStore = transaction.objectStore(this.storeName);
         const response = operation(objectStore);
 
         response.onerror = (e) => {
           reject(e);
         };
 
-        response.onsuccess = (e) => {
-          // console.log(e);
+        response.onsuccess = () => {
           resolve(response.result);
         };
       };
@@ -42,18 +37,41 @@ class IndexB {
   };
 
   insert = async (item) => {
-    const result = await this.indexedAsync((objectStore) => {
+    const result = await this.databaseRequest((objectStore) => {
       return objectStore.put(item);
     });
-    console.log(result);
+
+    return await this.selectOne(result);
   };
 
-  select = async (id) => {
-    const result = await this.indexedAsync((objectStore) => {
-      return objectStore.get(1);
+  delete = async (id) => {
+    await this.databaseRequest((objectStore) => {
+      return objectStore.delete(id);
+    });
+  };
+
+  update = async (item) => {
+    const result = await this.databaseRequest((objectStore) => {
+      return objectStore.put(item);
     });
 
-    console.log(result);
+    return await this.selectOne(result);
+  };
+
+  selectOne = async (id) => {
+    const result = await this.databaseRequest((objectStore) => {
+      return objectStore.get(id);
+    });
+
+    return result;
+  };
+
+  selectAll = async () => {
+    const result = await this.databaseRequest((objectStore) => {
+      return objectStore.getAll();
+    });
+
+    return result;
   };
 }
 
