@@ -6,42 +6,54 @@ class IndexB {
     window.indexedDB.deleteDatabase(this.database);
   }
 
-  insert = (item) => {
-    const request = window.indexedDB.open(this.database, 1);
+  indexedAsync = (operation) => {
+    return new Promise((resolve, reject) => {
+      const request = window.indexedDB.open(this.database, 1);
 
-    request.onupgradeneeded = () => {
-      const { result: db } = request;
-      db.createObjectStore(this.storeName, { keyPath: 'id' }); // most importante line, mistakes make yout db doesnt work!!
-    };
-
-    request.onsuccess = () => {
-      const { result: db } = request;
-      const transaction = db.transaction([this.storeName], 'readwrite');
-
-      const objectStore = transaction.objectStore(
-        [this.storeName],
-        'readwrite'
-      );
-
-      const response = objectStore.put({
-        id: 2,
-        name: 'Dimas Antonio',
-        last: 'Paiva',
-        age: 22
-      });
-
-      response.onsuccess = () => {
-        console.log(response);
+      request.onupgradeneeded = () => {
+        const { result: db } = request;
+        db.createObjectStore(this.storeName, { keyPath: 'id' });
       };
 
-      response.onerror = (e) => {
-        console.log(e);
-      };
-    };
+      request.onsuccess = () => {
+        const { result: db } = request;
+        const transaction = db.transaction(this.storeName, 'readwrite');
+        const objectStore = transaction.objectStore(
+          this.storeName,
+          'readwrite'
+        );
 
-    request.onerror = (e) => {
-      console.log(e);
-    };
+        const response = operation(objectStore);
+
+        response.onerror = (e) => {
+          reject(e);
+        };
+
+        response.onsuccess = (e) => {
+          // console.log(e);
+          resolve(response.result);
+        };
+      };
+
+      request.onerror = (e) => {
+        reject(e);
+      };
+    });
+  };
+
+  insert = async (item) => {
+    const result = await this.indexedAsync((objectStore) => {
+      return objectStore.put(item);
+    });
+    console.log(result);
+  };
+
+  select = async (id) => {
+    const result = await this.indexedAsync((objectStore) => {
+      return objectStore.get(1);
+    });
+
+    console.log(result);
   };
 }
 
